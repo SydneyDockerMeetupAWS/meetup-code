@@ -1,0 +1,3 @@
+[submodule "containers/AlienInvasion"]
+	path = containers/AlienInvasion
+	url = git@github.com:NightKhaos/AlienInvasion.git
