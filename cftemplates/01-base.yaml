@@ -6,17 +6,20 @@ Parameters:
         Type: String
         Default: example.com
         Description: Enter the DNS name used by these applications for creating a Route53 Hosted Zone
+    EnvironmentName:
+        Description: An environment name that will be prefixed to resource names
+        Type: String
 Resources:
     S3Bucket:
         Type: AWS::S3::Bucket
         Properties:
-            BucketName: !Sub dockermeetup-${AWS::AccountId}
+            BucketName: !Sub ${EnvironmentName}-${AWS::AccountId}
             AccessControl: Private
     ECSRole:
         Type: AWS::IAM::Role
         Properties: 
             Path: /
-            RoleName: !Sub DockerMeetup-ECSRole-${AWS::Region}
+            RoleName: !Sub ${EnvironmentName}-ECSRole-${AWS::Region}
             AssumeRolePolicyDocument: |
                 {
                     "Statement": [{
@@ -60,7 +63,7 @@ Resources:
     ECRrepo:
         Type: AWS::ECR::Repository
         Properties: 
-          RepositoryName: "docker-meetup-demo"
+          RepositoryName: !Sub ${EnvironmentName}
           RepositoryPolicyText: 
             Version: '2008-10-17'
             Statement:
@@ -90,7 +93,7 @@ Resources:
           ProvisionedThroughput: 
             ReadCapacityUnits: "15"
             WriteCapacityUnits: "15"
-          TableName: !Sub dockermeetup-${AWS::AccountId}
+          TableName: !Sub ${EnvironmentName}-${AWS::AccountId}
 Outputs:
     BucketName:
         Value: !Ref 'S3Bucket'
