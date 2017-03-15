@@ -1,0 +1,106 @@
+Description: >
+    This template deploys an ECS cluster to the provided VPC and subnets 
+    using an Auto Scaling Group
+Parameters: 
+    DNShostedZone:
+        Type: String
+        Default: example.com
+        Description: Enter the DNS name used by these applications for creating a Route53 Hosted Zone
+Resources:
+    S3Bucket:
+        Type: AWS::S3::Bucket
+        Properties:
+            BucketName: !Sub dockermeetup-${AWS::AccountId}
+            AccessControl: Private
+    ECSRole:
+        Type: AWS::IAM::Role
+        Properties: 
+            Path: /
+            RoleName: !Sub DockerMeetup-ECSRole-${AWS::Region}
+            AssumeRolePolicyDocument: |
+                {
+                    "Statement": [{
+                        "Action": "sts:AssumeRole",
+                        "Effect": "Allow",
+                        "Principal": { 
+                            "Service": "ec2.amazonaws.com" 
+                        }
+                    }]
+                }
+            Policies: 
+                - PolicyName: ecs-service
+                  PolicyDocument: |
+                    {
+                        "Statement": [{
+                            "Effect": "Allow",
+                            "Action": [
+                                "ecs:CreateCluster",
+                                "ecs:DeregisterContainerInstance",
+                                "ecs:DiscoverPollEndpoint",
+                                "ecs:Poll",
+                                "ecs:RegisterContainerInstance",
+                                "ecs:StartTelemetrySession",
+                                "ecs:Submit*",
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents",
+                                "ecr:BatchCheckLayerAvailability",
+                                "ecr:BatchGetImage",
+                                "ecr:GetDownloadUrlForLayer",
+                                "ecr:GetAuthorizationToken"
+                            ],
+                            "Resource": "*"
+                        }]
+                    }
+    ECSInstanceProfile: 
+        Type: AWS::IAM::InstanceProfile
+        Properties:
+          Path: /
+          Roles: 
+              - !Ref ECSRole
+    ECRrepo:
+        Type: AWS::ECR::Repository
+        Properties: 
+          RepositoryName: "docker-meetup-demo"
+          RepositoryPolicyText: 
+            Version: '2008-10-17'
+            Statement:
+            - Sid: dockermeetup
+              Effect: Allow
+              Principal:
+                AWS: !GetAtt ECSRole.Arn
+              Action:
+              - ecr:*
+    DNS: 
+        Type: "AWS::Route53::HostedZone"
+        Properties: 
+          HostedZoneConfig: 
+            Comment: "DNS used to point to the applications"
+          Name: !Ref DNShostedZone
+    Ddbscores: 
+        Type: "AWS::DynamoDB::Table"
+        Properties: 
+          AttributeDefinitions: 
+            - 
+              AttributeName: "playername"
+              AttributeType: "S"
+          KeySchema: 
+            - 
+              AttributeName: "playername"
+              KeyType: "HASH" 
+          ProvisionedThroughput: 
+            ReadCapacityUnits: "15"
+            WriteCapacityUnits: "15"
+          TableName: !Sub dockermeetup-${AWS::AccountId}
+Outputs:
+    BucketName:
+        Value: !Ref 'S3Bucket'
+        Description: Name of the sample Amazon S3 bucket with a notification configuration.
+    DDBname:
+        Value: !Ref 'Ddbscores'
+        Description: Name of Dynamodb table used by applications.
+    ECRrepo:
+        Value: !Ref 'ECRrepo'
+        Description: Name of the ECR repo used by ECS.
+    ECSinstanceprofile:
+        Value: !Ref 'ECSInstanceProfile' 
+        Description: Profile used by ECS instances.
