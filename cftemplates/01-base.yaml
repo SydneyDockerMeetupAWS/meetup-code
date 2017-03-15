@@ -70,7 +70,8 @@ Resources:
             - Sid: dockermeetup
               Effect: Allow
               Principal:
-                AWS: !GetAtt ECSRole.Arn
+                AWS:
+                  -  !GetAtt ECSRole.Arn
               Action:
               - ecr:*
     DNS: 
