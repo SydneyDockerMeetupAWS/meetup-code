@@ -1,5 +1,5 @@
 # Use python:2-alpine
-FROM python:2-alpine
+FROM python:3-alpine
 
 # Copy in the requirements.txt file
 COPY requirements.txt /requirements.txt
@@ -13,4 +13,4 @@ COPY app /app
 # Setup Flask
 ENV FLASK_APP=/app/postscore.py
 
-ENTRYPOINT flask run -h '::'
+ENTRYPOINT flask run -h '::' --no-reload --eager-loading
