@@ -1,4 +1,5 @@
 from flask import Flask, request
+from flask_cors import CORS
 import boto3
 import json
 import re
@@ -10,6 +11,11 @@ import uuid
 app = Flask(__name__)
 
 # Get the environment variables that aren't handled by Boto3 internally
+
+# Enable CORS
+ENABLE_CORS = os.environ.get('ENABLE_CORS')
+if ENABLE_CORS is not None and ENABLE_CORS.lower() in ('true', 'yes', 'on'):
+    CORS(app)
 
 # Region
 AWS_DEFAULT_REGION = os.environ.get('AWS_DEFAULT_REGION')
