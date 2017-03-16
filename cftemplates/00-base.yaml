@@ -6,6 +6,10 @@ Parameters:
         Type: String
         Default: example.com
         Description: Enter the DNS name used by these applications for creating a Route53 Hosted Zone
+    ValidationDomain:
+        Type: String
+        Default: example.com
+        Description: Enter the DNS name used to validate domain ownership for ACM
     EnvironmentName:
         Description: An environment name that will be prefixed to some resource names and outputs
         Default: DockerMeetup
@@ -34,7 +38,17 @@ Parameters:
         MinLength: "9"
         AllowedPattern: "(\\d{1,3}\\.){3}\\d{1,3}\\/\\d{1,2}"
         ConstraintDescription: "Must be a valid CIDR block in the form x.x.x.x/x"
+
 Resources:
+    # Request the ACM Certifcate
+    ACMCert:
+        Type: AWS::CertificateManager::Certificate
+        Properties:
+            DomainName: !Ref DNSHostedZone
+            DomainValidationOptions:
+              - DomainName: !Ref DNSHostedZone
+                ValidationDomain: !Ref ValidationDomain
+
     # S3 Bucket for us to upload the template stages too
     S3Bucket:
         Type: AWS::S3::Bucket
@@ -296,4 +310,9 @@ Outputs:
         Description: The subnets that were created in the template
         Export:
             Name: !Sub ${EnvironmentName}-Subnets
+    ACMCert:
+        Value: !Ref ACMCert
+        Description: The ARN of the ACMCert we will use for the Load Balancer
+        Export:
+            Name: !Sub ${EnvironmentName}-Cert
 
