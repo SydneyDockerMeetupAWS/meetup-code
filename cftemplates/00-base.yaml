@@ -101,6 +101,12 @@ Resources:
         Properties:
             RepositoryName: meetup-credits
 
+    # Repo for the redirect page
+    ECRRedirect:
+        Type: AWS::ECR::Repository
+        Properties:
+            RepositoryName: meetup-redirect
+
     # DNS Zone to place the ALB under
     DNSZone:
         Type: "AWS::Route53::HostedZone"
@@ -374,6 +380,11 @@ Outputs:
         Description: The ECR URL for the Credits Repo
         Export:
             Name: !Sub ${EnvironmentName}-ECRCredits
+    ECRRedirect:
+        Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRedirect}
+        Description: The ECR URL for the Redirect Container
+        Export:
+            Name: !Sub ${EnvironmentName}-ECRRedirect
     VpcId:
         Value: !Ref VPC
         Description: The VPC that was created in the template

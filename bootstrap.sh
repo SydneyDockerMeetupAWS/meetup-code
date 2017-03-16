@@ -16,11 +16,13 @@ ECRALIEN=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRAli
 ECRPSCORE=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRPscore")) | .OutputValue' DockerMeetupBaseDescribe.json)
 ECRSCORES=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRScores")) | .OutputValue' DockerMeetupBaseDescribe.json)
 ECRCREDITS=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRCredits")) | .OutputValue' DockerMeetupBaseDescribe.json)
+ECRREDIRECT=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRRedirect")) | .OutputValue' DockerMeetupBaseDescribe.json)
 S3BUCKET2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("S3Bucket")) | .OutputValue' DockerMeetupBase2Describe.json)
 ECRALIEN2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRAlien")) | .OutputValue' DockerMeetupBase2Describe.json)
 ECRPSCORE2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRPscore")) | .OutputValue' DockerMeetupBase2Describe.json)
 ECRSCORES2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRScores")) | .OutputValue' DockerMeetupBase2Describe.json)
 ECRCREDITS2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRCredits")) | .OutputValue' DockerMeetupBase2Describe.json)
+ECRREDIRECT2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRRedirect")) | .OutputValue' DockerMeetupBaseDescribe.json)
 rm -f DockerMeetupBaseDescribe.json
 rm -f DockerMeetupBase2Describe.json
 cp -f containers/AlienInvasion/game-sans-ajax.js containers/AlienInvasion/game.js
@@ -32,14 +34,18 @@ docker tag ${ECRALIEN}:ajax ${ECRALIEN2}:ajax
 rm -f containers/AlienInvasion/game.js
 docker build containers/postscore -t ${ECRPSCORE}:latest
 docker tag ${ECRPSCORE}:latest ${ECRPSCORE2}:latest
+docker build containers/redirect -t ${ECRREDIRECT}:latest
+docker tag ${ECRREDIRECT}:latest ${ECRREDIRECT2}:latest
 $(aws ecr get-login --region ap-southeast-2 $AWS_PROFILE)
 docker push ${ECRALIEN}:sans
 docker push ${ECRALIEN}:ajax
 docker push ${ECRPSCORE}:latest
+docker push ${ECRREDIRECT}:latest
 $(aws ecr get-login --region ap-southeast-1 $AWS_PROFILE)
 docker push ${ECRALIEN2}:sans
 docker push ${ECRALIEN2}:ajax
 docker push ${ECRPSCORE2}:latest
+docker push ${ECRREDIRECT}:latest
 
 aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET}/02-deployinfra.yaml --region ap-southeast-2 $AWS_PROFILE
 aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET2}/02-deployinfra.yaml --region ap-southeast-1 $AWS_PROFILE

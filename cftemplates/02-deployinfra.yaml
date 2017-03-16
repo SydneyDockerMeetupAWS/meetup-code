@@ -94,6 +94,10 @@ Resources:
                   IpProtocol: tcp
                   FromPort: 443
                   ToPort: 443
+                - CidrIp: 0.0.0.0/0
+                  IpProtocol: tcp
+                  FromPort: 80
+                  ToPort: 80
             VpcId:
                 "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
 
@@ -189,6 +193,16 @@ Resources:
                 "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneName
             Type: AAAA
 
+    LoadBalancerRedirectListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        DependsOn: LoadBalancerDualStack
+        Properties:
+            LoadBalancerArn: !Ref LoadBalancer
+            Port: 80
+            Protocol: HTTP
+            DefaultActions:
+              - Type: forward
+                TargetGroupArn: !Ref RedirectTargetGroup
 
     LoadBalancerListener:
         Type: AWS::ElasticLoadBalancingV2::Listener
@@ -207,11 +221,26 @@ Resources:
     DefaultTargetGroup:
         Type: AWS::ElasticLoadBalancingV2::TargetGroup
         Properties:
-            Name: default
             VpcId:
                 "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
             Port: 80
             Protocol: HTTP
+            HealthCheckPath: /
+            HealthCheckPort: traffic-port
+            HealthCheckProtocol: HTTP
+
+    RedirectTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+            Port: 5000
+            Protocol: HTTP
+            HealthCheckPath: /
+            HealthCheckPort: traffic-port
+            HealthCheckProtocol: HTTP
+            Matcher:
+                HttpCode: 302
 
     AlienInvasionTaskDefinition:
         Type: AWS::ECS::TaskDefinition
@@ -229,6 +258,22 @@ Resources:
                 PortMappings:
                   - ContainerPort: 80
 
+    RedirectTaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${EnvironmentName}-Redirect-Task
+            NetworkMode: bridge
+            ContainerDefinitions:
+              - Essential: true
+                Image:
+                    "Fn::Sub": 
+                      - '${ECRRedirect}:latest'
+                      - { ECRRedirect: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRRedirect" }}
+                Memory: 512
+                Name: redirect
+                PortMappings:
+                  - ContainerPort: 5000
+
     AlienInvasionService:
         Type: AWS::ECS::Service
         DependsOn: LoadBalancerListener
@@ -244,3 +289,19 @@ Resources:
               - ContainerName: alien
                 ContainerPort: 80
                 TargetGroupArn: !Ref DefaultTargetGroup
+
+    RedirectService:
+        Type: AWS::ECS::Service
+        DependsOn: LoadBalancerRedirectListener
+        Properties:
+            Cluster: !Ref ECSCluster
+            DeploymentConfiguration:
+                MaximumPercent: 200
+                MinimumHealthyPercent: 50
+            DesiredCount: 2
+            Role: !Ref ECSServiceRole
+            TaskDefinition: !Ref RedirectTaskDefinition
+            LoadBalancers:
+              - ContainerName: redirect
+                ContainerPort: 5000
+                TargetGroupArn: !Ref RedirectTargetGroup
