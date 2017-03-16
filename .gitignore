@@ -2,3 +2,5 @@
 *.swp
 .DS_Store
 key.pub
+key.pem
+fullkey.pub
