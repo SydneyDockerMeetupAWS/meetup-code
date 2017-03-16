@@ -41,3 +41,5 @@ docker push ${ECRALIEN2}:sans
 docker push ${ECRALIEN2}:ajax
 docker push ${ECRPSCORE2}:latest
 
+aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET}/02-deployinfra.yaml --region ap-southeast-2 $AWS_PROFILE
+aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET2}/02-deployinfra.yaml --region ap-southeast-1 $AWS_PROFILE

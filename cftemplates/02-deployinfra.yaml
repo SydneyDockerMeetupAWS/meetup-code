@@ -3,8 +3,9 @@ Description: >
     # based on https://github.com/NightKhaos/ecs-refarch-cloudformation/blob/master/infrastructure/ecs-cluster.yaml
 Parameters:
     EnvironmentName:
-        Description: An environment name that will be prefixed to resource names
+        Description: An environment name that will be prefixed to some resources names
         Type: String
+        Default: DockerMeetup
     InstanceType: 
         Description: Which instance type should we use to build the ECS cluster?
         Type: String
@@ -13,18 +14,6 @@ Parameters:
         Description: How many ECS hosts do you want to initially deploy?
         Type: Number
         Default: 4
-    SSHKey:
-        Type: AWS::EC2::KeyPair::KeyName
-        Description: SSH Key for to access to the ECS Hosts
-    ECSInstanceProfile:
-        Description: Instance profile used by EC2 instances - it is an output from 01-base
-        Type: String
-    VPC:
-        Type: AWS::EC2::VPC::Id
-        Description: Choose which VPC the Applicaion Load Balancer should be deployed to
-    Subnets:
-        Description: Choose which subnets the Applicaion Load Balancer should be deployed to
-        Type: List<AWS::EC2::Subnet::Id>
 Mappings:
 
     # These are the latest ECS optimized AMIs as of February 2017:
@@ -63,6 +52,19 @@ Mappings:
             AMI: ami-ead5688e
 
 Resources:
+    ECSServiceRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument: 
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                        Service: "ecs.amazonaws.com"
+                    Action:
+                      - "sts:AssumeRole"
+            ManagedPolicyArns:
+              - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole"
+
     ECSHostSecurityGroup:
         Type: AWS::EC2::SecurityGroup
         Properties: 
@@ -71,9 +73,13 @@ Resources:
                 # Only allow inbound access to ECS from the ELB
                 - SourceSecurityGroupId: !GetAtt [ "LoadBalancerSecurityGroup", "GroupId" ] 
                   IpProtocol: -1
-            Tags: 
-                - Key: Name
-                  Value: !Sub ${EnvironmentName}-ECS-Hosts
+                # Allow SSH access to the instances
+                - CidrIp: 0.0.0.0/0
+                  IpProtocol: tcp
+                  FromPort: 22
+                  ToPort: 22
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
 
     # This security group defines who/where is allowed to access the Application Load Balancer.
     # By default, we've opened this up to the public internet (0.0.0.0/0) but can you restrict
@@ -85,18 +91,17 @@ Resources:
             SecurityGroupIngress:
                 # Allow access from anywhere to our ECS services
                 - CidrIp: 0.0.0.0/0
-                  IpProtocol: -1
-            Tags: 
-                - Key: Name
-                  Value: !Sub ${EnvironmentName}-LoadBalancers
+                  IpProtocol: tcp
+                  FromPort: 443
+                  ToPort: 443
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+
     ECSAutoScalingGroup:
         Type: AWS::AutoScaling::AutoScalingGroup
         DependsOn: ECSHostSecurityGroup
         Properties: 
             LaunchConfigurationName: !Ref ECSLaunchConfiguration
-            AvailabilityZones:
-                Fn::GetAZs: 
-                  Ref: "AWS::Region"
             MinSize: !Ref ClusterSize
             MaxSize: !Ref ClusterSize
             DesiredCapacity: !Ref ClusterSize
@@ -104,62 +109,34 @@ Resources:
                 - Key: Name
                   Value: !Sub ${EnvironmentName} ECS host
                   PropagateAtLaunch: true
+            VPCZoneIdentifier:
+                "Fn::Split":
+                  - ","
+                  - "Fn::ImportValue": !Sub ${EnvironmentName}-Subnets
         CreationPolicy:
-            ResourceSignal: 
+            ResourceSignal:
                 Timeout: PT15M
         UpdatePolicy:
             AutoScalingReplacingUpdate:
                 WillReplace: true
-        
+
     ECSLaunchConfiguration:
         Type: AWS::AutoScaling::LaunchConfiguration
         Properties:
-            KeyName: !Ref SSHKey
+            KeyName:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-Key
             ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
             InstanceType: !Ref InstanceType
             SecurityGroups: 
                 - !Ref ECSHostSecurityGroup
-            IamInstanceProfile: !Ref ECSInstanceProfile
-            BlockDeviceMappings:
-                - DeviceName: /dev/xvdf
-                  Ebs:
-                    DeleteOnTermination: True
-                    VolumeSize: 20
-                    VolumeType: gp2
+            IamInstanceProfile:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-ECSInstanceProfile
             UserData: 
                 "Fn::Base64": !Sub |
-                    Content-Type: multipart/mixed; boundary="MIMEBOUNDARY"
-                    MIME-Version: 1.0
-                    --MIMEBOUNDARY
-                    Content-Disposition: attachment; filename="user_data.sh"
-                    Content-Transfer-Encoding: 7bit
-                    Content-Type: text/x-shellscript
-                    Mime-Version: 1.0
                     #!/bin/bash
                     echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
                     yum install -y aws-cfn-bootstrap
                     /opt/aws/bin/cfn-signal -s true --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
-                    --MIMEBOUNDARY
-                    Content-Disposition: attachment; filename="cloud_config.yaml"
-                    Content-Transfer-Encoding: 7bit
-                    Content-Type: text/cloud-config
-                    Mime-Version: 1.0
-                    #cloud-config
-                    #### Have to do this in bootcmd because fs_setup is not supported
-                    #### yet in Amazon Linux
-                    bootcmd:
-                      - cloud-init-per once mkfs mkfs.ext4 -L volumes /dev/xvdf
-                      - cloud-init-per once fstab echo "LABEL=volumes /var/lib/docker/volumes ext4 defaults 0 2" >> /etc/fstab
-                      - cloud-init-per once dir mkdir -p /var/lib/docker/volumes
-                      - cloud-init-per once mount mount /var/lib/docker/volumes
-    # This IAM Role is attached to all of the ECS hosts. It is based on the default role
-    # published here:
-    # http://docs.aws.amazon.com/AmazonECS/latest/developerguide/instance_IAM_role.html
-    #
-    # You can add other IAM policy statements here to allow access from your ECS hosts
-    # to other AWS services. Please note that this role will be used by ALL containers
-    # running on the ECS host.
-
     ECSCluster:
         Type: AWS::ECS::Cluster
         Properties:
@@ -167,46 +144,103 @@ Resources:
 
     LoadBalancer:
         Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-        DependsOn: LoadBalancerSecurityGroup
         Properties:
-            Name: !Ref EnvironmentName
-            Subnets: !Ref Subnets
+            Subnets:
+                "Fn::Split":
+                  - ","
+                  - "Fn::ImportValue": !Sub ${EnvironmentName}-Subnets
             SecurityGroups: 
                 - !GetAtt LoadBalancerSecurityGroup.GroupId
-            Tags: 
-                - Key: Name
-                  Value: !Ref EnvironmentName
+
+    LoadBalancerDualStack:
+        Type: Custom::ElasticLoadBalancerV2SetIPAddressType
+        Properties:
+            ServiceToken:
+                "Fn::ImportValue": !Sub vpc-ipv6-cfn-${AWS::Region}
+            LoadBalancerArn: !Ref LoadBalancer
+            IpAddressType: dualstack
+
+    ARecord:
+        Type: AWS::Route53::RecordSet
+        DependsOn: LoadBalancerDualStack
+        Properties:
+            AliasTarget:
+                DNSName: !GetAtt LoadBalancer.DNSName
+                EvaluateTargetHealth: false
+                HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+            HostedZoneId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneId
+            Name:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneName
+            Type: A
+
+
+    AAAARecord:
+        Type: AWS::Route53::RecordSet
+        DependsOn: LoadBalancerDualStack
+        Properties:
+            AliasTarget:
+                DNSName: !GetAtt LoadBalancer.DNSName
+                EvaluateTargetHealth: false
+                HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+            HostedZoneId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneId
+            Name:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneName
+            Type: AAAA
+
 
     LoadBalancerListener:
         Type: AWS::ElasticLoadBalancingV2::Listener
+        DependsOn: LoadBalancerDualStack
         Properties:
+            Certificates:
+              - CertificateArn:
+                  "Fn::ImportValue": !Sub ${EnvironmentName}-Cert
             LoadBalancerArn: !Ref LoadBalancer
-            Port: 80
-            Protocol: HTTP 
+            Port: 443
+            Protocol: HTTPS
             DefaultActions: 
                 - Type: forward
                   TargetGroupArn: !Ref DefaultTargetGroup
-    
-    # We define a default target group here, as this is a mandatory Parameters
-    # when creating an Application Load Balancer Listener. This is not used, instead
-    # a target group is created per-service in each service template (../services/*)
+
     DefaultTargetGroup:
         Type: AWS::ElasticLoadBalancingV2::TargetGroup
         Properties:
             Name: default
-            VpcId: !Ref VPC
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
             Port: 80
             Protocol: HTTP
-Outputs:
 
-    LoadBalancer:
-        Description: A reference to the Application Load Balancer
-        Value: !Ref LoadBalancer
+    AlienInvasionTaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${EnvironmentName}-Alien-Task
+            NetworkMode: bridge
+            ContainerDefinitions:
+              - Essential: true
+                Image:
+                    "Fn::Sub": 
+                      - '${ECRAlien}:sans'
+                      - { ECRAlien: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRAlien" }}
+                Memory: 1024
+                Name: alien
+                PortMappings:
+                  - ContainerPort: 80
 
-    LoadBalancerUrl:
-        Description: The URL of the ALB
-        Value: !GetAtt LoadBalancer.DNSName
-
-    Listener:
-        Description: A reference to a port 80 listener
-        Value: !Ref LoadBalancerListener 
+    AlienInvasionService:
+        Type: AWS::ECS::Service
+        DependsOn: LoadBalancerListener
+        Properties:
+            Cluster: !Ref ECSCluster
+            DeploymentConfiguration:
+                MaximumPercent: 200
+                MinimumHealthyPercent: 50
+            DesiredCount: 2
+            Role: !Ref ECSServiceRole
+            TaskDefinition: !Ref AlienInvasionTaskDefinition
+            LoadBalancers:
+              - ContainerName: alien
+                ContainerPort: 80
+                TargetGroupArn: !Ref DefaultTargetGroup
