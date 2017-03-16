@@ -49,3 +49,5 @@ docker push ${ECRREDIRECT}:latest
 
 aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET}/02-deployinfra.yaml --region ap-southeast-2 $AWS_PROFILE
 aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET2}/02-deployinfra.yaml --region ap-southeast-1 $AWS_PROFILE
+aws s3 cp cftemplates/03-addscores.yaml s3://${S3BUCKET}/03-addscores.yaml --region ap-southeast-2 $AWS_PROFILE
+aws s3 cp cftemplates/03-addscores.yaml s3://${S3BUCKET2}/03-addscores.yaml --region ap-southeast-1 $AWS_PROFILE

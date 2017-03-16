@@ -252,7 +252,7 @@ Resources:
               - Essential: true
                 Image:
                     "Fn::Sub": 
-                      - '${ECRAlien}:sans'
+                      - '${ECRAlien}:ajax'
                       - { ECRAlien: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRAlien" }}
                 Memory: 1024
                 Name: alien
@@ -306,3 +306,103 @@ Resources:
               - ContainerName: redirect
                 ContainerPort: 5000
                 TargetGroupArn: !Ref RedirectTargetGroup
+
+    PostScoresTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+            Port: 5000
+            Protocol: HTTP
+            HealthCheckPath: /
+            HealthCheckPort: traffic-port
+            HealthCheckProtocol: HTTP
+
+    PostScoresListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+            ListenerArn: !Ref LoadBalancerListener
+            Priority: 1
+            Conditions:
+              - Field: path-pattern
+                Values:
+                  - /pscore
+            Actions:
+              - TargetGroupArn: !Ref PostScoresTargetGroup
+                Type: forward
+
+    PostScoreTaskRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - sts:AssumeRole
+                    Principal:
+                        Service: ecs-tasks.amazonaws.com
+            Policies:
+              - PolicyName: PutRecordsToDynamoDB
+                PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                      - Effect: Allow
+                        Action:
+                          - dynamodb:DescribeStream
+                          - dynamodb:DescribeTable
+                          - dynamodb:ListTables
+                          - dynamodb:ListStreams
+                        Resource:
+                          - "*"
+                      - Effect: Allow
+                        Action:
+                          - dynamodb:BatchGetItem
+                          - dynamodb:BatchWriteItem
+                          - dynamodb:DeleteItem
+                          - dynamodb:GetItem
+                          - dynamodb:GetRecords
+                          - dynamodb:PutItem
+                          - dynamodb:UpdateItem
+                        Resource:
+                          - "Fn::Sub":
+                              - 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TableName}'
+                              - { TableName: { "Fn::ImportValue" : !Sub "${EnvironmentName}-DDBScores" }}
+
+    PostScoresTaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${EnvironmentName}-Pscores-Task
+            NetworkMode: bridge
+            TaskRoleArn: !GetAtt PostScoreTaskRole.Arn
+            ContainerDefinitions:
+              - Essential: true
+                Image:
+                    "Fn::Sub": 
+                      - '${ECRPscore}:latest'
+                      - { ECRPscore: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRPscore" }}
+                Memory: 512
+                Name: pscore
+                Environment:
+                  - Name: AWS_DYNAMODB_TABLE_NAME
+                    Value: 
+                        "Fn::ImportValue": !Sub ${EnvironmentName}-DDBScores
+                PortMappings:
+                  - ContainerPort: 5000
+
+    PostScoresService:
+        Type: AWS::ECS::Service
+        DependsOn: PostScoresListenerRule
+        Properties:
+            Cluster: !Ref ECSCluster
+            DeploymentConfiguration:
+                MaximumPercent: 200
+                MinimumHealthyPercent: 50
+            DesiredCount: 4
+            Role: !Ref ECSServiceRole
+            TaskDefinition: !Ref PostScoresTaskDefinition
+            LoadBalancers:
+              - ContainerName: pscore
+                ContainerPort: 5000
+                TargetGroupArn: !Ref PostScoresTargetGroup
+
+
