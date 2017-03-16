@@ -38,6 +38,9 @@ Parameters:
         MinLength: "9"
         AllowedPattern: "(\\d{1,3}\\.){3}\\d{1,3}\\/\\d{1,2}"
         ConstraintDescription: "Must be a valid CIDR block in the form x.x.x.x/x"
+    KeyPayload:
+        Type: "String"
+        Description: "The key payload to create a keypair"
 
 Resources:
     # Request the ACM Certifcate
@@ -254,6 +257,77 @@ Resources:
             RouteTableId: !Ref PublicRouteTable
             SubnetId: !Ref PublicSubnetB
 
+    # Create an SSH KeyPair
+    LambdaFunctionRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - sts:AssumeRole
+                    Principal:
+                        Service:
+                          - lambda.amazonaws.com
+
+
+    LambdaFunctionPolicy:
+        Type: AWS::IAM::Policy
+        Properties:
+            Roles:
+              - !Ref LambdaFunctionRole
+            PolicyName: ImportKeyPair
+            PolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                  - Action:
+                      - logs:CreateLogGroup
+                      - logs:CreateLogStream
+                      - logs:PutLogEvents
+                    Effect: Allow
+                    Resource: "arn:aws:logs:*:*:*"
+                  - Action:
+                      - ec2:ImportKeyPair
+                      - ec2:CreateKeyPair
+                      - ec2:DeleteKeyPair
+                    Effect: Allow
+                    Resource: "*"
+
+
+    LambdaFunction:
+        Type: AWS::Lambda::Function
+        DependsOn: LambdaFunctionPolicy
+        Properties:
+            Runtime: python2.7
+            Code:
+                ZipFile: !Sub |
+                    import cfnresponse
+                    import boto3
+                    import uuid
+                    def handler(event, context):
+                        payload = event['ResourceProperties']['KeyPayload']
+                        client = boto3.client('ec2','${AWS::Region}')
+                        keyname = uuid.uuid4().hex
+                        if event['RequestType'] == 'Delete':
+                            response = client.delete_key_pair(KeyName=event['PhysicalResourceId'])
+                            cfnresponse.send(event,context,cfnresponse.SUCCESS, {'Key':'Value'}, event['PhysicalResourceId'])
+                        else:
+                            response = client.import_key_pair(KeyName=keyname,PublicKeyMaterial=payload)
+                            cfnresponse.send(event,context,cfnresponse.SUCCESS, {'KeyName':keyname},keyname)
+            Description: Imports a KeyPair
+            Handler: index.handler
+            MemorySize: 256
+            Role: !GetAtt LambdaFunctionRole.Arn
+            Timeout: 300
+
+    KeyPair:
+        Type: Custom::KeyPair
+        Properties:
+            ServiceToken: !GetAtt LambdaFunction.Arn
+            KeyPayload: !Ref KeyPayload
+
+
 Outputs:
     S3Bucket:
         Value: !Ref S3Bucket
@@ -315,4 +389,9 @@ Outputs:
         Description: The ARN of the ACMCert we will use for the Load Balancer
         Export:
             Name: !Sub ${EnvironmentName}-Cert
+    KeyPair:
+        Value: !GetAtt KeyPair.KeyName
+        Description: Name of the EC2 KeyPair
+        Export:
+            Name: !Sub ${EnvironmentName}-Key
 

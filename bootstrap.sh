@@ -7,8 +7,8 @@ wget https://s3-ap-southeast-2.amazonaws.com/vpc-ipv6-cfn-code-ap-southeast-2/te
 aws cloudformation deploy --region ap-southeast-2 --template-file template.yml --stack-name vpc-ipv6-cfn --capabilities CAPABILITY_IAM $AWS_PROFILE || true
 aws cloudformation deploy --region ap-southeast-1 --template-file template.yml --stack-name vpc-ipv6-cfn --capabilities CAPABILITY_IAM $AWS_PROFILE || true
 rm -f template.yml
-aws cloudformation deploy --region ap-southeast-2 --template-file cftemplates/00-base.yaml --stack-name DockerMeetupBase --capabilities CAPABILITY_IAM --parameter-overrides  DNSHostedZone=aws.nkh.io ValidationDomain=nkh.io $AWS_PROFILE || true
-aws cloudformation deploy --region ap-southeast-1 --template-file cftemplates/00-base.yaml --stack-name DockerMeetupBase2 --capabilities CAPABILITY_IAM --parameter-overrides DNSHostedZone=aws2.nkh.io ValidationDomain=nkh.io EnvironmentName=DockerMeetup2 $AWS_PROFILE || true
+aws cloudformation deploy --region ap-southeast-2 --template-file cftemplates/00-base.yaml --stack-name DockerMeetupBase --capabilities CAPABILITY_IAM --parameter-overrides  DNSHostedZone=aws.nkh.io ValidationDomain=nkh.io KeyPayload="$(cat key.pub | tr -d '\n')" $AWS_PROFILE || true
+aws cloudformation deploy --region ap-southeast-1 --template-file cftemplates/00-base.yaml --stack-name DockerMeetupBase2 --capabilities CAPABILITY_IAM --parameter-overrides DNSHostedZone=aws2.nkh.io ValidationDomain=nkh.io EnvironmentName=DockerMeetup2 KeyPayload="$(cat key.pub | tr -d '\n')" $AWS_PROFILE || true
 aws cloudformation describe-stacks --region ap-southeast-2 --stack-name DockerMeetupBase $AWS_PROFILE > DockerMeetupBaseDescribe.json
 aws cloudformation describe-stacks --region ap-southeast-1 --stack-name DockerMeetupBase2 $AWS_PROFILE > DockerMeetupBase2Describe.json
 S3BUCKET=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("S3Bucket")) | .OutputValue' DockerMeetupBaseDescribe.json)
