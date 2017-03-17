@@ -229,6 +229,9 @@ Resources:
             HealthCheckPath: /
             HealthCheckPort: traffic-port
             HealthCheckProtocol: HTTP
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 30
 
     RedirectTargetGroup:
         Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -242,6 +245,9 @@ Resources:
             HealthCheckProtocol: HTTP
             Matcher:
                 HttpCode: 302
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 30
 
     AlienInvasionTaskDefinition:
         Type: AWS::ECS::TaskDefinition
@@ -317,6 +323,9 @@ Resources:
             HealthCheckPath: /
             HealthCheckPort: traffic-port
             HealthCheckProtocol: HTTP
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 30
 
     PostScoresListenerRule:
         Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -331,7 +340,7 @@ Resources:
               - TargetGroupArn: !Ref PostScoresTargetGroup
                 Type: forward
 
-    PostScoreTaskRole:
+    ScoreTaskRole:
         Type: AWS::IAM::Role
         Properties:
             AssumeRolePolicyDocument:
@@ -363,6 +372,8 @@ Resources:
                           - dynamodb:GetRecords
                           - dynamodb:PutItem
                           - dynamodb:UpdateItem
+                          - dynamodb:Scan
+                          - dynamodb:Query
                         Resource:
                           - "Fn::Sub":
                               - 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TableName}'
@@ -373,7 +384,7 @@ Resources:
         Properties:
             Family: !Sub ${EnvironmentName}-Pscores-Task
             NetworkMode: bridge
-            TaskRoleArn: !GetAtt PostScoreTaskRole.Arn
+            TaskRoleArn: !GetAtt ScoreTaskRole.Arn
             ContainerDefinitions:
               - Essential: true
                 Image:

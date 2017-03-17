@@ -13,4 +13,4 @@ COPY app /app
 # Setup Flask
 ENV FLASK_APP=/app/postscore.py
 
-ENTRYPOINT flask run -h '::' --no-reload --eager-loading
+ENTRYPOINT flask run -h '::' --no-reload --eager-loading --with-threads

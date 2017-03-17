@@ -21,7 +21,7 @@ if ENABLE_CORS is not None and ENABLE_CORS.lower() in ('true', 'yes', 'on'):
 AWS_DEFAULT_REGION = os.environ.get('AWS_DEFAULT_REGION')
 if AWS_DEFAULT_REGION is None:
     try:
-        r = requests.get('http://169.254.169.254/latest/dynamic/instance-identity/document',timeout=3)
+        r = requests.get('http://169.254.169.254/latest/dynamic/instance-identity/document',timeout=5)
         AWS_DEFAULT_REGION = r.json()['region']
     except Exception as e:
         AWS_DEFAULT_REGION = 'us-east-1'
@@ -33,9 +33,6 @@ if AWS_DYNAMODB_TABLE_NAME is None:
 
 # Create client
 client = boto3.client('dynamodb',AWS_DEFAULT_REGION)
-
-# Test connection
-client.list_tables()
 
 def inInput(input, keys):
     for index, item in enumerate(keys):

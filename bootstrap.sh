@@ -58,6 +58,8 @@ docker build containers/postscore -t ${ECRPSCORE}:latest
 docker tag ${ECRPSCORE}:latest ${ECRPSCORE2}:latest
 docker build containers/redirect -t ${ECRREDIRECT}:latest
 docker tag ${ECRREDIRECT}:latest ${ECRREDIRECT2}:latest
+docker build containers/scoreboard -t ${ECRSCORES}:latest
+docker tag ${ECRSCORES}:latest ${ECRSCORES2}:latest
 
 echo 'Pushing Containers...'
 $(aws ecr get-login --region ap-southeast-2 $AWS_PROFILE)
@@ -65,14 +67,18 @@ docker push ${ECRALIEN}:sans
 docker push ${ECRALIEN}:ajax
 docker push ${ECRPSCORE}:latest
 docker push ${ECRREDIRECT}:latest
+docker push ${ECRSCORES}:latest
 $(aws ecr get-login --region ap-southeast-1 $AWS_PROFILE)
 docker push ${ECRALIEN2}:sans
 docker push ${ECRALIEN2}:ajax
 docker push ${ECRPSCORE2}:latest
-docker push ${ECRREDIRECT}:latest
+docker push ${ECRREDIRECT2}:latest
+docker push ${ECRSCORES2}:latest
 
 echo 'Pushing files to S3..'
 aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET}/02-deployinfra.yaml --region ap-southeast-2 $AWS_PROFILE
 aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET2}/02-deployinfra.yaml --region ap-southeast-1 $AWS_PROFILE
 aws s3 cp cftemplates/03-addscores.yaml s3://${S3BUCKET}/03-addscores.yaml --region ap-southeast-2 $AWS_PROFILE
 aws s3 cp cftemplates/03-addscores.yaml s3://${S3BUCKET2}/03-addscores.yaml --region ap-southeast-1 $AWS_PROFILE
+aws s3 cp cftemplates/04-addboard.yaml s3://${S3BUCKET}/04-addboard.yaml --region ap-southeast-2 $AWS_PROFILE
+aws s3 cp cftemplates/04-addboard.yaml s3://${S3BUCKET2}/04-addboard.yaml --region ap-southeast-1 $AWS_PROFILE

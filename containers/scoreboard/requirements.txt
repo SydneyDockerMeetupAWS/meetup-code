@@ -1,0 +1,5 @@
+Flask>=0.12
+Jinja2>=2.9
+boto3>=1.4
+requests>=2.13
+flask-cors>=3

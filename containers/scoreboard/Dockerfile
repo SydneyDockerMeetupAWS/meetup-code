@@ -11,6 +11,6 @@ RUN pip install -r /requirements.txt
 COPY app /app
 
 # Setup Flask
-ENV FLASK_APP=/app/redirect.py
+ENV FLASK_APP=/app/scoreboard.py
 
 ENTRYPOINT flask run -h '::' --no-reload --eager-loading --with-threads

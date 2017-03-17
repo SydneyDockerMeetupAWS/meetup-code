@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+  <meta charset="UTF-8">
+  <title>Docker Invasion - High Scores</title>
+  <link href='https://fonts.googleapis.com/css?family=Bangers' rel='stylesheet' type='text/css'>
+  <meta name="viewport" content="width=device-width, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+
+<body>
+<div id="container">
+<h1>Docker Invasion</h1>
+<h2>High Scores</h2>
+
+<table>
+<tr>
+    <td>Name</td>
+    <td>Score</td>
+    <td>Survived?</td>
+</tr>
+{% for item in scores %}
+<tr>
+    <td> {{ item.username }} </td>
+    <td> {{ item.score }} </td>
+    {% if item.completed %}
+    <td> Alive </td>
+    {% else %}
+    <td> Died </td>
+    {% endif %}
+</tr>
+{% endfor %}
+<table>
+</div>
+</body>
+</html>
