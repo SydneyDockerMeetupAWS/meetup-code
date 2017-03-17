@@ -82,30 +82,75 @@ Resources:
         Type: AWS::ECR::Repository
         Properties:
             RepositoryName: meetup-alien
+            RepositoryPolicyText:
+                Version: 2008-10-17
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                    Action:
+                      - ecr:*
 
     # Repo for the post score API
     ECRPscore:
         Type: AWS::ECR::Repository
         Properties:
             RepositoryName: meetup-pscore
+            RepositoryPolicyText:
+                Version: 2008-10-17
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                    Action:
+                      - ecr:*
 
     # Repo for the high scores page
     ECRScores:
         Type: AWS::ECR::Repository
         Properties:
             RepositoryName: meetup-scores
+            RepositoryPolicyText:
+                Version: 2008-10-17
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                    Action:
+                      - ecr:*
 
     # Repo for the credits page
     ECRCredits:
         Type: AWS::ECR::Repository
         Properties:
             RepositoryName: meetup-credits
+            RepositoryPolicyText:
+                Version: 2008-10-17
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                    Action:
+                      - ecr:*
 
     # Repo for the redirect page
     ECRRedirect:
         Type: AWS::ECR::Repository
         Properties:
             RepositoryName: meetup-redirect
+            RepositoryPolicyText:
+                Version: 2008-10-17
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                    Action:
+                      - ecr:*
 
     # DNS Zone to place the ALB under
     DNSZone:
