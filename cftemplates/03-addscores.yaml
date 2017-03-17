@@ -73,8 +73,13 @@ Resources:
                 # Only allow inbound access to ECS from the ELB
                 - SourceSecurityGroupId: !GetAtt [ "LoadBalancerSecurityGroup", "GroupId" ] 
                   IpProtocol: -1
-                # Allow SSH access to the instances
-                - CidrIp: 0.0.0.0/0
+                # Allow SSH access to the instances from a Bastion (Taylor)
+                - CidrIp: 13.54.48.115/32
+                  IpProtocol: tcp
+                  FromPort: 22
+                  ToPort: 22
+                # Allow SSH access to the instances from a Bastion (Marcus)
+                - CidrIp: 13.55.209.220/32
                   IpProtocol: tcp
                   FromPort: 22
                   ToPort: 22
