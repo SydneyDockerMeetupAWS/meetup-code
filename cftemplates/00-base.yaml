@@ -87,8 +87,9 @@ Resources:
                 Statement:
                   - Effect: Allow
                     Principal:
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                        AWS:
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
                     Action:
                       - ecr:*
 
@@ -102,8 +103,9 @@ Resources:
                 Statement:
                   - Effect: Allow
                     Principal:
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                        AWS:
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
                     Action:
                       - ecr:*
 
@@ -117,8 +119,9 @@ Resources:
                 Statement:
                   - Effect: Allow
                     Principal:
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                        AWS:
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
                     Action:
                       - ecr:*
 
@@ -132,8 +135,9 @@ Resources:
                 Statement:
                   - Effect: Allow
                     Principal:
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                        AWS:
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
                     Action:
                       - ecr:*
 
@@ -147,8 +151,9 @@ Resources:
                 Statement:
                   - Effect: Allow
                     Principal:
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                        AWS:
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
                     Action:
                       - ecr:*
 
