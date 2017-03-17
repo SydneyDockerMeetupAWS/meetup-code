@@ -85,13 +85,19 @@ Resources:
             RepositoryPolicyText:
                 Version: 2008-10-17
                 Statement:
-                  - Effect: Allow
+                  - Sid: PushPullForDeployment
+                    Effect: Allow
                     Principal:
                         AWS:
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/deployment"
                     Action:
-                      - ecr:*
+                      - "ecr:GetDownloadUrlForLayer"
+                      - "ecr:BatchGetImage"
+                      - "ecr:BatchCheckLayerAvailability"
+                      - "ecr:PutImage"
+                      - "ecr:InitiateLayerUpload"
+                      - "ecr:UploadLayerPart"
+                      - "ecr:CompleteLayerUpload"
 
     # Repo for the post score API
     ECRPscore:
@@ -101,13 +107,19 @@ Resources:
             RepositoryPolicyText:
                 Version: 2008-10-17
                 Statement:
-                  - Effect: Allow
+                  - Sid: PushPullForDeployment
+                    Effect: Allow
                     Principal:
                         AWS:
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/deployment"
                     Action:
-                      - ecr:*
+                      - "ecr:GetDownloadUrlForLayer"
+                      - "ecr:BatchGetImage"
+                      - "ecr:BatchCheckLayerAvailability"
+                      - "ecr:PutImage"
+                      - "ecr:InitiateLayerUpload"
+                      - "ecr:UploadLayerPart"
+                      - "ecr:CompleteLayerUpload"
 
     # Repo for the high scores page
     ECRScores:
@@ -117,13 +129,19 @@ Resources:
             RepositoryPolicyText:
                 Version: 2008-10-17
                 Statement:
-                  - Effect: Allow
+                  - Sid: PushPullForDeployment
+                    Effect: Allow
                     Principal:
                         AWS:
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/deployment"
                     Action:
-                      - ecr:*
+                      - "ecr:GetDownloadUrlForLayer"
+                      - "ecr:BatchGetImage"
+                      - "ecr:BatchCheckLayerAvailability"
+                      - "ecr:PutImage"
+                      - "ecr:InitiateLayerUpload"
+                      - "ecr:UploadLayerPart"
+                      - "ecr:CompleteLayerUpload"
 
     # Repo for the credits page
     ECRCredits:
@@ -133,13 +151,19 @@ Resources:
             RepositoryPolicyText:
                 Version: 2008-10-17
                 Statement:
-                  - Effect: Allow
+                  - Sid: PushPullForDeployment
+                    Effect: Allow
                     Principal:
                         AWS:
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/deployment"
                     Action:
-                      - ecr:*
+                      - "ecr:GetDownloadUrlForLayer"
+                      - "ecr:BatchGetImage"
+                      - "ecr:BatchCheckLayerAvailability"
+                      - "ecr:PutImage"
+                      - "ecr:InitiateLayerUpload"
+                      - "ecr:UploadLayerPart"
+                      - "ecr:CompleteLayerUpload"
 
     # Repo for the redirect page
     ECRRedirect:
@@ -149,13 +173,19 @@ Resources:
             RepositoryPolicyText:
                 Version: 2008-10-17
                 Statement:
-                  - Effect: Allow
+                  - Sid: PushPullForDeployment
+                    Effect: Allow
                     Principal:
                         AWS:
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/*"
-                          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+                          - !Sub "arn:aws:iam::${AWS::AccountId}:user/deployment"
                     Action:
-                      - ecr:*
+                      - "ecr:GetDownloadUrlForLayer"
+                      - "ecr:BatchGetImage"
+                      - "ecr:BatchCheckLayerAvailability"
+                      - "ecr:PutImage"
+                      - "ecr:InitiateLayerUpload"
+                      - "ecr:UploadLayerPart"
+                      - "ecr:CompleteLayerUpload"
 
     # DNS Zone to place the ALB under
     DNSZone:
