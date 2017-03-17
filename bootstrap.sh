@@ -42,7 +42,7 @@ ECRALIEN2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRAl
 ECRPSCORE2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRPscore")) | .OutputValue' DockerMeetupBase2Describe.json)
 ECRSCORES2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRScores")) | .OutputValue' DockerMeetupBase2Describe.json)
 ECRCREDITS2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRCredits")) | .OutputValue' DockerMeetupBase2Describe.json)
-ECRREDIRECT2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRRedirect")) | .OutputValue' DockerMeetupBaseDescribe.json)
+ECRREDIRECT2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRRedirect")) | .OutputValue' DockerMeetupBase2Describe.json)
 rm -f DockerMeetupBaseDescribe.json
 rm -f DockerMeetupBase2Describe.json
 
