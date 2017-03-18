@@ -1,0 +1,53 @@
+Parameters:
+    InRegionS3:
+        Type: String
+
+Resources:
+    LambdaExecutionRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - sts:AssumeRole
+                    Principal:
+                        Service:
+                          - lambda.amazonaws.com
+            ManagedPolicyArns:
+              - "arn:aws:iam::aws:policy/AdministratorAccess"
+
+    AlexaSkillFunction:
+        Type: AWS::Lambda::Function
+        Properties:
+            Runtime: python2.7
+            Code:
+                S3Bucket: !ImportValue LambdaBucket
+                S3Key: lambda.zip
+            Description: Handles the Alexa Skill
+            Handler: lambda.handler
+            MemorySize: 256
+            Role: !GetAtt LambdaExecutionRole.Arn
+            Timeout: 300
+            Environment:
+                Variables:
+                    TEMPLATE_PATH_BASE:   !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/02-deployinfra.yaml"
+                    TEMPLATE_PATH_SCORES: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/03-addscores.yaml"
+                    TEMPLATE_PATH_PSCORE: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/04-addboard.yaml"
+
+
+    AlexaPermissions:
+        Type: AWS::Lambda::Permission
+        Properties:
+            Action: lambda:InvokeFunction
+            FunctionName: !Ref AlexaSkillFunction
+            Principal: alexa-appkit.amazon.com
+
+
+Outputs:
+    LambdaFunctionArn:
+        Description: The ARN of the function that will be attached to the skill
+        Value: !GetAtt AlexaSkillFunction.Arn
+
+

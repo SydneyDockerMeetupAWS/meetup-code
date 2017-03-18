@@ -12,7 +12,7 @@ TEMPLATE_PATH_BASE = os.getenv('TEMPLATE_PATH_BASE')
 TEMPLATE_PATH_PSCORE = os.getenv('TEMPLATE_PATH_PSCORE')
 TEMPLATE_PATH_SCORES = os.getenv('TEMPLATE_PATH_SCORES')
 TEMPLATE_PATH_INFO = os.getenv('TEMPLATE_PATH_INFO')
-STACK_NAME = os.getenv('STACK_NAME') or 'LambdaDeployedStack'
+STACK_NAME = os.getenv('STACK_NAME') or 'AlexaDeployedStack'
 STACK_REGION = os.getenv('STACK_REGION') or 'ap-southeast-2'
 STACK_ENVIRONNAME = os.getenv('STACK_ENVIRONNAME') or 'DockerMeetup'
 
