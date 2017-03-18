@@ -40,7 +40,7 @@ def queryOnSessionKey(request,startkey=None):
 
 def deploy(request,path,msg):
     if path is None:
-        return alexa.respond(message="Could not prepare the deployment request to create the %s" % msg)
+        return alexa.respond(message="Could not prepare the deployment request to create the %s" % msg, end_session=True)
     response = dclient.put_item(TableName=DYNAMO_TABLE,
                                 Item={
                                     'sessionId' : { 'S' : request.session_id() },
@@ -54,14 +54,18 @@ def deploy(request,path,msg):
 @alexa.default
 def default(request):
     ''' The default handler gets invoked if Alexa doesn't understand the request '''
-    return alexa.respond(message="I'm sorry. I'm afraid I can't do that. Please try another request.", reprompt_message="Please try another request")
+    return alexa.respond(message="I'm sorry. I'm afraid I can't do that. Please try another request.", end_session=True)
 
 @alexa.intent("YesIntent")
+def affirmative(request):
+    return confirm(request)
+
+@alexa.intent("AMAZON.YesIntent")
 def confirm(request):
     ''' This handler will confirm requests and execute them '''
     response = queryOnSessionKey(request)
     if response['Count'] == 0:
-        return alexa.respond(message="Would you like to make a request?",reprompt_message="Please try another request")
+        return alexa.respond(message="I am not sure what you would like to do.", end_session=True)
 
     r_items = response['Items']
     while ('LastEvaluatedKey' in response):
@@ -132,7 +136,14 @@ def deploy_scores(request):
 def deploy_info(request):
     return deploy(request,TEMPLATE_PATH_INFO,"Info Scores Container")
 
-@alexa.intent("NoIntent")
+@alexa.intent("AMAZON.NoIntent")
 def deny(request):
     return alexa.respond(message="Goodbye!", end_session=True)
 
+@alexa.intent("AMAZON.StopIntent")
+def stop(request):
+    return deny(request)
+
+@alexa.intent("AMAZON.CancelIntent")
+def cancel(request):
+    return deny(request)

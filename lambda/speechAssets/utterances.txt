@@ -1,4 +1,3 @@
-YesIntent Yes
 YesIntent go ahead
 YesIntent sure
 YesIntent affirmative
@@ -6,6 +5,3 @@ DeployBase create infrastructure
 DeployPscore deploy post container
 DeployScores provide ranking page
 DeployInfo info page is missing
-NoIntent stop
-Nointent no
-Nointent negative
