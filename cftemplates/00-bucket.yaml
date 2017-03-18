@@ -6,5 +6,3 @@ Outputs:
     Bucket:
         Description: "Bucket where the Lambda Code should be stored"
         Value: !Ref Bucket
-        Export:
-            Name: LambdaBucket

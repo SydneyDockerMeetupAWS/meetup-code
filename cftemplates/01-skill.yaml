@@ -35,9 +35,7 @@ Resources:
         Type: AWS::Lambda::Function
         Properties:
             Runtime: python2.7
-            Code:
-                S3Bucket: !ImportValue LambdaBucket
-                S3Key: lambda.zip
+            Code: ../lambda/lambda.zip
             Description: Handles the Alexa Skill
             Handler: lambda.handler
             MemorySize: 256

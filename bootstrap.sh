@@ -93,7 +93,8 @@ aws s3 cp cftemplates/04-addboard.yaml s3://${S3BUCKET}/04-addboard.yaml --regio
 aws s3 cp cftemplates/04-addboard.yaml s3://${S3BUCKET2}/04-addboard.yaml --region ap-southeast-1 $AWS_PROFILE
 aws s3 cp lambda/lambda.zip s3://${S3BUCKET}/lambda.zip --region ap-southeast-2 $AWS_PROFILE
 aws s3 cp lambda/lambda.zip s3://${S3BUCKET2}/lambda.zip --region ap-southeast-1 $AWS_PROFILE
-aws s3 cp lambda/lambda.zip s3://${S3USEAST1}/lambda.zip --region us-east-1 $AWS_PROFILE
 
 echo 'Deploy Alexa Skill'
-aws cloudformation deploy --region us-east-1 --template-file cftemplates/01-skill.yaml --stack-name AlexaSkill --capabilities CAPABILITY_IAM --parameter-overrides InRegionS3=$S3BUCKET  $AWS_PROFILE || true
+aws cloudformation package --s3-bucket ${S3USEAST1} --template-file cftemplates/01-skill.yaml --output-template-file 01-skill-fixed.yaml $AWS_PROFILE
+aws cloudformation deploy --region us-east-1 --template-file 01-skill-fixed.yaml --stack-name AlexaSkill --capabilities CAPABILITY_IAM --parameter-overrides InRegionS3=$S3BUCKET  $AWS_PROFILE || true
+rm -f 01-skill-fixed.yaml
