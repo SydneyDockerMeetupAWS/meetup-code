@@ -18,6 +18,19 @@ Resources:
             ManagedPolicyArns:
               - "arn:aws:iam::aws:policy/AdministratorAccess"
 
+    AlexaSkillTable:
+        Type: AWS::DynamoDB::Table
+        Properties:
+            AttributeDefinitions:
+                - AttributeName: sessionId
+                  AttributeType: S
+            KeySchema:
+                - AttributeName: sessionId
+                  KeyType: HASH
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+
     AlexaSkillFunction:
         Type: AWS::Lambda::Function
         Properties:
@@ -32,6 +45,7 @@ Resources:
             Timeout: 300
             Environment:
                 Variables:
+                    DYNAMO_TABLE: !Ref AlexaSkillTable
                     TEMPLATE_PATH_BASE:   !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/02-deployinfra.yaml"
                     TEMPLATE_PATH_SCORES: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/03-addscores.yaml"
                     TEMPLATE_PATH_PSCORE: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/04-addboard.yaml"
