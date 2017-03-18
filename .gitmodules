@@ -1,3 +1,12 @@
 [submodule "containers/AlienInvasion"]
 	path = containers/AlienInvasion
 	url = https://github.com/NightKhaos/AlienInvasion.git
+[submodule "lambda/modules/boto3"]
+	path = lambda/modules/boto3
+	url = https://github.com/boto/boto3.git
+[submodule "lambda/modules/botocore"]
+	path = lambda/modules/botocore
+	url = https://github.com/boto/botocore.git
+[submodule "lambda/modules/ask-alexa-pykit"]
+	path = lambda/modules/ask-alexa-pykit
+	url = https://github.com/anjishnu/ask-alexa-pykit.git

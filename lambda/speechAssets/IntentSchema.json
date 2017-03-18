@@ -1,0 +1,22 @@
+{
+  "intents": [
+    {
+      "intent": "YesIntent"
+    },
+    {
+      "intent": "DeployBase"
+    },
+    {
+      "intent": "DeployPscore"
+    },
+    {
+      "intent": "DeployScores"
+    },
+    {
+      "intent": "DeployInfo"
+    },
+    {
+      "intent": "NoIntent"
+    }
+  ]
+}
