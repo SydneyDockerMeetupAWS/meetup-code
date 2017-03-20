@@ -85,10 +85,11 @@ def confirm(request):
     s_request = s_items[0]
 
     try:
-        response = cclient.list_stacks(StackStatusFilter=['CREATE_COMPLETE','ROLLBACK_COMPLETE','DELETE_COMPLETE','UPDATE_COMPLETE','UPDATE_ROLLBACK_COMPLETE'])
+        stackFilter = StackStatusFilter=['CREATE_COMPLETE','ROLLBACK_COMPLETE','UPDATE_COMPLETE','UPDATE_ROLLBACK_COMPLETE']
+        response = cclient.list_stacks(StackStatusFilter=stackFilter)
         stacks = response['StackSummaries']
         while ('NextToken' in response):
-            response = cclient.list_stacks(NextToken=response['NextToken'])
+            response = cclient.list_stacks(NextToken=response['NextToken'],StackStatusFilter=stackFilter)
             stacks += response['StackSummaries']
 
         found = False
