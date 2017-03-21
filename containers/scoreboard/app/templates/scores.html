@@ -7,6 +7,44 @@
   <meta name="viewport" content="width=device-width, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+/* Center the container */
+body {
+    background-color: black;
+}
+#container {
+    position: relative;
+    padding-top:50px;
+    margin:0 auto;
+    width:320px;
+}
+h1 {
+    font-family: "Bangers";
+    font-size: 28pt;
+    color: white;
+    text-align: center;
+}
+h2 {
+    font-family: "Bangers";
+    font-size: 20pt;
+    color: white;
+    text-align: center
+}
+
+td {
+    font-family: sans-serif;
+    color: white;
+    text-align: left;
+}
+
+#score {
+    text-align: right;
+}
+
+#title {
+    font-weight: bold;
+}
+  </style>
 </head>
 
 <body>
@@ -16,14 +54,14 @@
 
 <table>
 <tr>
-    <td>Name</td>
-    <td>Score</td>
-    <td>Survived?</td>
+    <td id="title">Name</td>
+    <td id="title">Score</td>
+    <td id="title">Survived?</td>
 </tr>
 {% for item in scores %}
 <tr>
     <td> {{ item.username }} </td>
-    <td> {{ item.score }} </td>
+    <td id="score"> {{ item.score }} </td>
     {% if item.completed %}
     <td> Alive </td>
     {% else %}
