@@ -135,7 +135,7 @@ def deploy_scores(request):
 
 @alexa.intent("DeployInfo")
 def deploy_info(request):
-    return deploy(request,TEMPLATE_PATH_INFO,"Info Scores Container")
+    return deploy(request,TEMPLATE_PATH_INFO,"Info Page Container")
 
 @alexa.intent("AMAZON.NoIntent")
 def deny(request):

@@ -1,0 +1,545 @@
+Description: >
+    This template deploys an ECS cluster, ALB, Security groups and Autoscaling groups with EC2 instances
+    # based on https://github.com/NightKhaos/ecs-refarch-cloudformation/blob/master/infrastructure/ecs-cluster.yaml
+Parameters:
+    EnvironmentName:
+        Description: An environment name that will be prefixed to some resources names
+        Type: String
+        Default: DockerMeetup
+    InstanceType: 
+        Description: Which instance type should we use to build the ECS cluster?
+        Type: String
+        Default: c4.large
+    ClusterSize:
+        Description: How many ECS hosts do you want to initially deploy?
+        Type: Number
+        Default: 4
+Mappings:
+
+    # These are the latest ECS optimized AMIs as of February 2017:
+    #
+    #   amzn-ami-2016.09.f-amazon-ecs-optimized
+    #   ECS agent:    1.14.0
+    #   Docker:       1.12.6
+    #   ecs-init:     1.14.0-2
+    #
+    # You can find the latest available on this page of our documentation:
+    # http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
+    # (note the AMI identifier is region specific) 
+
+    AWSRegionToAMI:
+        us-east-1:
+            AMI: ami-b2df2ca4
+        us-east-2:
+            AMI: ami-832b0ee6
+        us-west-1:
+            AMI: ami-dd104dbd
+        us-west-2:
+            AMI: ami-022b9262
+        eu-west-1:
+            AMI: ami-a7f2acc1
+        eu-west-2:
+            AMI: ami-3fb6bc5b
+        eu-central-1:
+            AMI: ami-ec2be583
+        ap-northeast-1:
+            AMI: ami-c393d6a4
+        ap-southeast-1:
+            AMI: ami-a88530cb
+        ap-southeast-2:
+            AMI: ami-8af8ffe9
+        ca-central-1:
+            AMI: ami-ead5688e
+
+Resources:
+    ECSServiceRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument: 
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                        Service: "ecs.amazonaws.com"
+                    Action:
+                      - "sts:AssumeRole"
+            ManagedPolicyArns:
+              - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole"
+
+    ECSHostSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+            GroupDescription: Access to the ECS hosts and the tasks/containers that run on them
+            SecurityGroupIngress:
+                # Only allow inbound access to ECS from the ELB
+                - SourceSecurityGroupId: !GetAtt [ "LoadBalancerSecurityGroup", "GroupId" ] 
+                  IpProtocol: -1
+                # Allow SSH access to the instances from a Bastion (Taylor)
+                - CidrIp: 13.54.48.115/32
+                  IpProtocol: tcp
+                  FromPort: 22
+                  ToPort: 22
+                # Allow SSH access to the instances from a Bastion (Marcus)
+                - CidrIp: 13.55.209.220/32
+                  IpProtocol: tcp
+                  FromPort: 22
+                  ToPort: 22
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+
+    # This security group defines who/where is allowed to access the Application Load Balancer.
+    # By default, we've opened this up to the public internet (0.0.0.0/0) but can you restrict
+    # it further if you want.
+    LoadBalancerSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+            GroupDescription: Access to the load balancer that sits in front of ECS
+            SecurityGroupIngress:
+                # Allow access from anywhere to our ECS services
+                - CidrIp: 0.0.0.0/0
+                  IpProtocol: tcp
+                  FromPort: 443
+                  ToPort: 443
+                - CidrIp: 0.0.0.0/0
+                  IpProtocol: tcp
+                  FromPort: 80
+                  ToPort: 80
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+
+    ECSAutoScalingGroup:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        DependsOn: ECSHostSecurityGroup
+        Properties: 
+            LaunchConfigurationName: !Ref ECSLaunchConfiguration
+            MinSize: !Ref ClusterSize
+            MaxSize: !Ref ClusterSize
+            DesiredCapacity: !Ref ClusterSize
+            Tags: 
+                - Key: Name
+                  Value: !Sub ${EnvironmentName} ECS host
+                  PropagateAtLaunch: true
+            VPCZoneIdentifier:
+                "Fn::Split":
+                  - ","
+                  - "Fn::ImportValue": !Sub ${EnvironmentName}-Subnets
+        CreationPolicy:
+            ResourceSignal:
+                Timeout: PT15M
+        UpdatePolicy:
+            AutoScalingReplacingUpdate:
+                WillReplace: true
+
+    ECSLaunchConfiguration:
+        Type: AWS::AutoScaling::LaunchConfiguration
+        Properties:
+            KeyName:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-Key
+            ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
+            InstanceType: !Ref InstanceType
+            SecurityGroups: 
+                - !Ref ECSHostSecurityGroup
+            IamInstanceProfile:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-ECSInstanceProfile
+            UserData: 
+                "Fn::Base64": !Sub |
+                    #!/bin/bash
+                    echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+                    echo ECS_ENABLE_TASK_IAM_ROLE=true >> /etc/ecs/ecs.config
+                    yum install -y aws-cfn-bootstrap
+                    /opt/aws/bin/cfn-signal -s true --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
+    ECSCluster:
+        Type: AWS::ECS::Cluster
+        Properties:
+            ClusterName: !Ref EnvironmentName
+
+    LoadBalancer:
+        Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+        Properties:
+            Subnets:
+                "Fn::Split":
+                  - ","
+                  - "Fn::ImportValue": !Sub ${EnvironmentName}-Subnets
+            SecurityGroups: 
+                - !GetAtt LoadBalancerSecurityGroup.GroupId
+
+    LoadBalancerDualStack:
+        Type: Custom::ElasticLoadBalancerV2SetIPAddressType
+        Properties:
+            ServiceToken:
+                "Fn::ImportValue": !Sub vpc-ipv6-cfn-${AWS::Region}
+            LoadBalancerArn: !Ref LoadBalancer
+            IpAddressType: dualstack
+
+    ARecord:
+        Type: AWS::Route53::RecordSet
+        DependsOn: LoadBalancerDualStack
+        Properties:
+            AliasTarget:
+                DNSName: !GetAtt LoadBalancer.DNSName
+                EvaluateTargetHealth: false
+                HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+            HostedZoneId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneId
+            Name:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneName
+            Type: A
+
+
+    AAAARecord:
+        Type: AWS::Route53::RecordSet
+        DependsOn: LoadBalancerDualStack
+        Properties:
+            AliasTarget:
+                DNSName: !GetAtt LoadBalancer.DNSName
+                EvaluateTargetHealth: false
+                HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+            HostedZoneId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneId
+            Name:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-HostedZoneName
+            Type: AAAA
+
+    LoadBalancerRedirectListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        DependsOn: LoadBalancerDualStack
+        Properties:
+            LoadBalancerArn: !Ref LoadBalancer
+            Port: 80
+            Protocol: HTTP
+            DefaultActions:
+              - Type: forward
+                TargetGroupArn: !Ref RedirectTargetGroup
+
+    LoadBalancerListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        DependsOn: LoadBalancerDualStack
+        Properties:
+            Certificates:
+              - CertificateArn:
+                  "Fn::ImportValue": !Sub ${EnvironmentName}-Cert
+            LoadBalancerArn: !Ref LoadBalancer
+            Port: 443
+            Protocol: HTTPS
+            DefaultActions: 
+                - Type: forward
+                  TargetGroupArn: !Ref DefaultTargetGroup
+
+    DefaultTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+            Port: 80
+            Protocol: HTTP
+            HealthCheckPath: /
+            HealthCheckPort: traffic-port
+            HealthCheckProtocol: HTTP
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 30
+
+    RedirectTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+            Port: 5000
+            Protocol: HTTP
+            HealthCheckPath: /
+            HealthCheckPort: traffic-port
+            HealthCheckProtocol: HTTP
+            Matcher:
+                HttpCode: 302
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 30
+
+    AlienInvasionTaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${EnvironmentName}-Alien-Task
+            NetworkMode: bridge
+            ContainerDefinitions:
+              - Essential: true
+                Image:
+                    "Fn::Sub": 
+                      - '${ECRAlien}:ajax'
+                      - { ECRAlien: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRAlien" }}
+                Memory: 1024
+                Name: alien
+                PortMappings:
+                  - ContainerPort: 80
+
+    RedirectTaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${EnvironmentName}-Redirect-Task
+            NetworkMode: bridge
+            ContainerDefinitions:
+              - Essential: true
+                Image:
+                    "Fn::Sub": 
+                      - '${ECRRedirect}:latest'
+                      - { ECRRedirect: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRRedirect" }}
+                Memory: 512
+                Name: redirect
+                PortMappings:
+                  - ContainerPort: 5000
+
+    AlienInvasionService:
+        Type: AWS::ECS::Service
+        DependsOn: LoadBalancerListener
+        Properties:
+            Cluster: !Ref ECSCluster
+            DeploymentConfiguration:
+                MaximumPercent: 200
+                MinimumHealthyPercent: 50
+            DesiredCount: 2
+            Role: !Ref ECSServiceRole
+            TaskDefinition: !Ref AlienInvasionTaskDefinition
+            LoadBalancers:
+              - ContainerName: alien
+                ContainerPort: 80
+                TargetGroupArn: !Ref DefaultTargetGroup
+
+    RedirectService:
+        Type: AWS::ECS::Service
+        DependsOn: LoadBalancerRedirectListener
+        Properties:
+            Cluster: !Ref ECSCluster
+            DeploymentConfiguration:
+                MaximumPercent: 200
+                MinimumHealthyPercent: 50
+            DesiredCount: 2
+            Role: !Ref ECSServiceRole
+            TaskDefinition: !Ref RedirectTaskDefinition
+            LoadBalancers:
+              - ContainerName: redirect
+                ContainerPort: 5000
+                TargetGroupArn: !Ref RedirectTargetGroup
+
+    PostScoresTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+            Port: 5000
+            Protocol: HTTP
+            HealthCheckPath: /
+            HealthCheckPort: traffic-port
+            HealthCheckProtocol: HTTP
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 30
+
+    PostScoresListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+            ListenerArn: !Ref LoadBalancerListener
+            Priority: 1
+            Conditions:
+              - Field: path-pattern
+                Values:
+                  - /pscore
+            Actions:
+              - TargetGroupArn: !Ref PostScoresTargetGroup
+                Type: forward
+
+    ScoreTaskRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - sts:AssumeRole
+                    Principal:
+                        Service: ecs-tasks.amazonaws.com
+            Policies:
+              - PolicyName: PutRecordsToDynamoDB
+                PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                      - Effect: Allow
+                        Action:
+                          - dynamodb:DescribeStream
+                          - dynamodb:DescribeTable
+                          - dynamodb:ListTables
+                          - dynamodb:ListStreams
+                        Resource:
+                          - "*"
+                      - Effect: Allow
+                        Action:
+                          - dynamodb:BatchGetItem
+                          - dynamodb:BatchWriteItem
+                          - dynamodb:DeleteItem
+                          - dynamodb:GetItem
+                          - dynamodb:GetRecords
+                          - dynamodb:PutItem
+                          - dynamodb:UpdateItem
+                          - dynamodb:Scan
+                          - dynamodb:Query
+                        Resource:
+                          - "Fn::Sub":
+                              - 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TableName}'
+                              - { TableName: { "Fn::ImportValue" : !Sub "${EnvironmentName}-DDBScores" }}
+
+    PostScoresTaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${EnvironmentName}-Pscores-Task
+            NetworkMode: bridge
+            TaskRoleArn: !GetAtt ScoreTaskRole.Arn
+            ContainerDefinitions:
+              - Essential: true
+                Image:
+                    "Fn::Sub": 
+                      - '${ECRPscore}:latest'
+                      - { ECRPscore: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRPscore" }}
+                Memory: 512
+                Name: pscore
+                Environment:
+                  - Name: AWS_DYNAMODB_TABLE_NAME
+                    Value: 
+                        "Fn::ImportValue": !Sub ${EnvironmentName}-DDBScores
+                PortMappings:
+                  - ContainerPort: 5000
+
+    PostScoresService:
+        Type: AWS::ECS::Service
+        DependsOn: PostScoresListenerRule
+        Properties:
+            Cluster: !Ref ECSCluster
+            DeploymentConfiguration:
+                MaximumPercent: 200
+                MinimumHealthyPercent: 50
+            DesiredCount: 4
+            Role: !Ref ECSServiceRole
+            TaskDefinition: !Ref PostScoresTaskDefinition
+            LoadBalancers:
+              - ContainerName: pscore
+                ContainerPort: 5000
+                TargetGroupArn: !Ref PostScoresTargetGroup
+
+    HighScoresTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+            Port: 5000
+            Protocol: HTTP
+            HealthCheckPath: /
+            HealthCheckPort: traffic-port
+            HealthCheckProtocol: HTTP
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 30
+
+    HighScoresListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+            ListenerArn: !Ref LoadBalancerListener
+            Priority: 2
+            Conditions:
+              - Field: path-pattern
+                Values:
+                  - /scores
+            Actions:
+              - TargetGroupArn: !Ref HighScoresTargetGroup
+                Type: forward
+
+    HighScoresTaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${EnvironmentName}-HighScores-Task
+            NetworkMode: bridge
+            TaskRoleArn: !GetAtt ScoreTaskRole.Arn
+            ContainerDefinitions:
+              - Essential: true
+                Image:
+                    "Fn::Sub": 
+                      - '${ECRScores}:latest'
+                      - { ECRScores: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRScores" }}
+                Memory: 512
+                Name: scores
+                Environment:
+                  - Name: AWS_DYNAMODB_TABLE_NAME
+                    Value: 
+                        "Fn::ImportValue": !Sub ${EnvironmentName}-DDBScores
+                PortMappings:
+                  - ContainerPort: 5000
+
+    HighScoresService:
+        Type: AWS::ECS::Service
+        DependsOn: HighScoresListenerRule
+        Properties:
+            Cluster: !Ref ECSCluster
+            DeploymentConfiguration:
+                MaximumPercent: 200
+                MinimumHealthyPercent: 50
+            DesiredCount: 2
+            Role: !Ref ECSServiceRole
+            TaskDefinition: !Ref HighScoresTaskDefinition
+            LoadBalancers:
+              - ContainerName: scores
+                ContainerPort: 5000
+                TargetGroupArn: !Ref HighScoresTargetGroup
+
+    InfoPageTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId:
+                "Fn::ImportValue": !Sub ${EnvironmentName}-VpcId
+            Port: 5000
+            Protocol: HTTP
+            HealthCheckPath: /
+            HealthCheckPort: traffic-port
+            HealthCheckProtocol: HTTP
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 30
+
+    InfoPageListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+            ListenerArn: !Ref LoadBalancerListener
+            Priority: 3
+            Conditions:
+              - Field: path-pattern
+                Values:
+                  - /info
+            Actions:
+              - TargetGroupArn: !Ref InfoPageTargetGroup
+                Type: forward
+
+    InfoPageTaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${EnvironmentName}-InfoPage-Task
+            NetworkMode: bridge
+            ContainerDefinitions:
+              - Essential: true
+                Image:
+                    "Fn::Sub": 
+                      - '${ECRCredits}:latest'
+                      - { ECRCredits: { "Fn::ImportValue" : !Sub "${EnvironmentName}-ECRCredits" }}
+                Memory: 512
+                Name: infopage
+                PortMappings:
+                  - ContainerPort: 5000
+
+    InfoPageService:
+        Type: AWS::ECS::Service
+        DependsOn: InfoPageListenerRule
+        Properties:
+            Cluster: !Ref ECSCluster
+            DeploymentConfiguration:
+                MaximumPercent: 200
+                MinimumHealthyPercent: 50
+            DesiredCount: 2
+            Role: !Ref ECSServiceRole
+            TaskDefinition: !Ref InfoPageTaskDefinition
+            LoadBalancers:
+              - ContainerName: infopage
+                ContainerPort: 5000
+                TargetGroupArn: !Ref InfoPageTargetGroup

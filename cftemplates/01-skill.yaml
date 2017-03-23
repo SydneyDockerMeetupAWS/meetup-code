@@ -47,6 +47,7 @@ Resources:
                     TEMPLATE_PATH_BASE:   !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/02-deployinfra.yaml"
                     TEMPLATE_PATH_PSCORE: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/03-addscores.yaml"
                     TEMPLATE_PATH_SCORES: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/04-addboard.yaml"
+                    TEMPLATE_PATH_INFO:   !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/05-addinfo.yaml"
 
 
     AlexaPermissions:

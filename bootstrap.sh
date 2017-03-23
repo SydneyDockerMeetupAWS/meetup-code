@@ -66,6 +66,8 @@ docker build containers/redirect -t ${ECRREDIRECT}:latest
 docker tag ${ECRREDIRECT}:latest ${ECRREDIRECT2}:latest
 docker build containers/scoreboard -t ${ECRSCORES}:latest
 docker tag ${ECRSCORES}:latest ${ECRSCORES2}:latest
+docker build containers/info -t ${ECRCREDITS}:latest
+docker tag ${ECRCREDITS}:latest ${ECRCREDITS2}:latest
 
 echo 'Building Lambda Function...'
 lambda/setup.sh
@@ -77,12 +79,14 @@ docker push ${ECRALIEN}:ajax
 docker push ${ECRPSCORE}:latest
 docker push ${ECRREDIRECT}:latest
 docker push ${ECRSCORES}:latest
+docker push ${ECRCREDITS}:latest
 $(aws ecr get-login --region ap-southeast-1 $AWS_PROFILE)
 docker push ${ECRALIEN2}:sans
 docker push ${ECRALIEN2}:ajax
 docker push ${ECRPSCORE2}:latest
 docker push ${ECRREDIRECT2}:latest
 docker push ${ECRSCORES2}:latest
+docker push ${ECRCREDITS2}:latest
 
 echo 'Pushing files to S3..'
 aws s3 cp cftemplates/02-deployinfra.yaml s3://${S3BUCKET}/02-deployinfra.yaml --region ap-southeast-2 $AWS_PROFILE
@@ -91,6 +95,8 @@ aws s3 cp cftemplates/03-addscores.yaml s3://${S3BUCKET}/03-addscores.yaml --reg
 aws s3 cp cftemplates/03-addscores.yaml s3://${S3BUCKET2}/03-addscores.yaml --region ap-southeast-1 $AWS_PROFILE
 aws s3 cp cftemplates/04-addboard.yaml s3://${S3BUCKET}/04-addboard.yaml --region ap-southeast-2 $AWS_PROFILE
 aws s3 cp cftemplates/04-addboard.yaml s3://${S3BUCKET2}/04-addboard.yaml --region ap-southeast-1 $AWS_PROFILE
+aws s3 cp cftemplates/05-addinfo.yaml s3://${S3BUCKET}/05-addinfo.yaml --region ap-southeast-2 $AWS_PROFILE
+aws s3 cp cftemplates/05-addinfo.yaml s3://${S3BUCKET2}/05-addinfo.yaml --region ap-southeast-1 $AWS_PROFILE
 aws s3 cp lambda/lambda.zip s3://${S3BUCKET}/lambda.zip --region ap-southeast-2 $AWS_PROFILE
 aws s3 cp lambda/lambda.zip s3://${S3BUCKET2}/lambda.zip --region ap-southeast-1 $AWS_PROFILE
 
