@@ -1,6 +1,6 @@
 [submodule "containers/AlienInvasion"]
 	path = containers/AlienInvasion
-	url = https://github.com/NightKhaos/AlienInvasion.git
+	url = https://github.com/SydneyDockerMeetupAWS/AlienInvasion.git
 [submodule "lambda/modules/boto3"]
 	path = lambda/modules/boto3
 	url = https://github.com/boto/boto3.git
