@@ -23,7 +23,7 @@ sclient = boto3.client('dynamodb',STACK_REGION)
 cclient = boto3.client('cloudformation',STACK_REGION)
 
 # Max score is to filter results to help find second place.
-if MAX_SCORE is not None and not MAX_SCORE.is_digit():
+if MAX_SCORE is not None and not MAX_SCORE.isdigit():
     MAX_SCORE = None
 
 def dedupdict(l):

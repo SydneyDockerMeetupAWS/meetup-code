@@ -1,8 +1,10 @@
 YesIntent go ahead
 YesIntent sure
 YesIntent affirmative
-DeployBase deploy infrastructure
-DeployBase create infrastructure
+DeployBase deploy game
+DeployBase create game
+DeployBase deploy game container
+DeployBase create game container
 DeployPscore deploy score submit page
 DeployPscore deploy score submit container
 DeployPscore create score submit page
