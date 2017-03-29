@@ -182,19 +182,19 @@ def confirm_request(request):
 
 @alexa.intent("DeployBase")
 def deploy_base(request):
-    return deploy(request,TEMPLATE_PATH_BASE,"Base Infrastructure")
+    return deploy(request,TEMPLATE_PATH_BASE,"The Game")
 
 @alexa.intent("DeployPscore")
 def deploy_pscore(request):
-    return deploy(request,TEMPLATE_PATH_PSCORE,"Score Request Container")
+    return deploy(request,TEMPLATE_PATH_PSCORE,"Score Submit Container")
 
 @alexa.intent("DeployScores")
 def deploy_scores(request):
-    return deploy(request,TEMPLATE_PATH_SCORES,"High Scores Container")
+    return deploy(request,TEMPLATE_PATH_SCORES,"High Scores Page")
 
 @alexa.intent("DeployInfo")
 def deploy_info(request):
-    return deploy(request,TEMPLATE_PATH_INFO,"Info Page Container")
+    return deploy(request,TEMPLATE_PATH_INFO,"Info Page")
 
 @alexa.intent("CheckScores")
 def check_scores(request):
@@ -205,11 +205,11 @@ def check_scores(request):
     if len(scores) == 1:
         return alexa.respond(message="The winner is %s with a score of %d where they %s." % (scores[0]['username'], scores[0]['score'], 'survived' if scores[0]['completed'] else 'died'), end_session=True)
 
-    names = 'and %s' % scores[0]['username']
+    names = 'and %s.' % scores[0]['username']
     for index, item in enumerate(scores):
         if not index == 0:
             names = '%s, ' % item['username'] + names
-    message = 'There are multiple winners with a score of %d where they %s. Their names are: %s' % (scores[0]['score'], 'survived' if scores[0]['completed'] else 'died', names)
+    message = 'There are multiple winners with a score of %d where they %s. Their names are %s' % (scores[0]['score'], 'survived' if scores[0]['completed'] else 'died', names)
     return alexa.respond(message=message, end_session=True)
 
 @alexa.intent("AMAZON.NoIntent")

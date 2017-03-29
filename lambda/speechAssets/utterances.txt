@@ -1,8 +1,23 @@
 YesIntent go ahead
 YesIntent sure
 YesIntent affirmative
+DeployBase deploy infrastructure
 DeployBase create infrastructure
-DeployPscore deploy post container
-DeployScores provide ranking page
+DeployPscore deploy score submit page
+DeployPscore deploy score submit container
+DeployPScore create score submit page
+DeployPScore create score submit container
+DeployScores deploy ranking page
+DeployScores create ranking page
+DeployScores deploy high scores page
+DeployScores create high scores page
+DeployScores high scores page is missing
 DeployInfo info page is missing
+DeployInfo create info page
+DeployInfo deploy info page
+DeployInfo create info page container
+DeployInfo deploy info page container
 CheckScores high scores
+CheckScores who is the winner
+CheckScores high scores for game
+CheckScores top rankings for game
