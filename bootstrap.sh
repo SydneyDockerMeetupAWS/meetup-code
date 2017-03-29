@@ -41,6 +41,7 @@ ECRPSCORE=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRPs
 ECRSCORES=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRScores")) | .OutputValue' DockerMeetupBaseDescribe.json)
 ECRCREDITS=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRCredits")) | .OutputValue' DockerMeetupBaseDescribe.json)
 ECRREDIRECT=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRRedirect")) | .OutputValue' DockerMeetupBaseDescribe.json)
+SCORETABLE=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("DDBScores")) | .OutputValue' DockerMeetupBaseDescribe.json)
 S3BUCKET2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("S3Bucket")) | .OutputValue' DockerMeetupBase2Describe.json)
 ECRALIEN2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRAlien")) | .OutputValue' DockerMeetupBase2Describe.json)
 ECRPSCORE2=$(jq -r '.Stacks[] | .Outputs[] | select( .OutputKey | contains("ECRPscore")) | .OutputValue' DockerMeetupBase2Describe.json)
@@ -102,5 +103,5 @@ aws s3 cp lambda/lambda.zip s3://${S3BUCKET2}/lambda.zip --region ap-southeast-1
 
 echo 'Deploy Alexa Skill'
 aws cloudformation package --s3-bucket ${S3USEAST1} --template-file cftemplates/01-skill.yaml --output-template-file 01-skill-fixed.yaml $AWS_PROFILE
-aws cloudformation deploy --region us-east-1 --template-file 01-skill-fixed.yaml --stack-name AlexaSkill --capabilities CAPABILITY_IAM --parameter-overrides InRegionS3=$S3BUCKET  $AWS_PROFILE || true
+aws cloudformation deploy --region us-east-1 --template-file 01-skill-fixed.yaml --stack-name AlexaSkill --capabilities CAPABILITY_IAM --parameter-overrides InRegion=$S3BUCKET ScoreTableName=$SCORETABLE $AWS_PROFILE || true
 rm -f 01-skill-fixed.yaml

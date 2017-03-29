@@ -43,7 +43,7 @@ def appenditems(response, u_scores):
         l_item['escore'] = int(item['score']['N'])
         l_item['completed'] = item['completed']['BOOL']
         if item['completed']['BOOL']:
-            l_item['escore'] += 1000
+            l_item['escore'] += 1001
         u_scores.append(l_item)
     return u_scores
 

@@ -5,3 +5,4 @@ DeployBase create infrastructure
 DeployPscore deploy post container
 DeployScores provide ranking page
 DeployInfo info page is missing
+CheckScores high scores

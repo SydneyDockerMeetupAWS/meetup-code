@@ -15,9 +15,19 @@ TEMPLATE_PATH_INFO = os.getenv('TEMPLATE_PATH_INFO')
 STACK_NAME = os.getenv('STACK_NAME') or 'AlexaDeployedStack'
 STACK_REGION = os.getenv('STACK_REGION') or 'ap-southeast-2'
 STACK_ENVIRONNAME = os.getenv('STACK_ENVIRONNAME') or 'DockerMeetup'
+SCORE_TABLE_NAME = os.getenv('SCORE_TABLE_NAME')
+MAX_SCORE = os.getenv('MAX_SCORE')
 
 dclient = boto3.client('dynamodb',DYNAMO_REGION)
+sclient = boto3.client('dynamodb',STACK_REGION)
 cclient = boto3.client('cloudformation',STACK_REGION)
+
+# Max score is to filter results to help find second place.
+if MAX_SCORE is not None and not MAX_SCORE.is_digit():
+    MAX_SCORE = None
+
+def dedupdict(l):
+    return [dict(t) for t in set([tuple(d.items()) for d in l])]
 
 def handler(request_obj, context={}):
     ''' All requests start here '''
@@ -51,16 +61,57 @@ def deploy(request,path,msg):
                                 })
     return alexa.respond(message="Please confirm you would like to deploy the %s" % msg)
 
+def appenditems(response, u_scores):
+    for index, item in enumerate(response['Items']):
+        l_item = {}
+        l_item['username'] = item['username']['S']
+        l_item['score'] = int(item['score']['N'])
+        l_item['escore'] = int(item['score']['N'])
+        l_item['completed'] = item['completed']['BOOL']
+        if item['completed']['BOOL']:
+            l_item['escore'] += 1001
+        if not MAX_SCORE or l_item['escore'] <= int(MAX_SCORE):
+            u_scores.append(l_item)
+    return u_scores
+
+def getscores():
+    if not SCORE_TABLE_NAME:
+        return None
+
+    response = sclient.scan(TableName=SCORE_TABLE_NAME)
+
+    u_scores = appenditems(response,[])
+
+    while('LastEvaluatedKey' in response):
+        response = sclient.scan(TableName=SCORE_TABLE_NAME, ExclusiveStartKey=response['LastEvaluatedKey'])
+        u_scores = appenditems(response,u_scores)
+
+    # dedup as well so that multiple entries of same score result in one value
+    scores = sorted(dedupdict(u_scores), key=itemgetter('escore'), reverse=True)
+    return scores
+
+def topscores():
+    scores = getscores()
+    if not scores:
+        return None
+
+    h_scores = []
+    h_score = scores.pop(0)
+    h_scores.append(h_score)
+    while scores:
+        c_score = scores.pop(0)
+        if h_score['escore'] == c_score['escore']:
+            h_scores.append(c_score)
+        else:
+            break
+
+    return h_scores
+
 @alexa.default
 def default(request):
     ''' The default handler gets invoked if Alexa doesn't understand the request '''
     return alexa.respond(message="I'm sorry. I'm afraid I can't do that. Please try another request.", end_session=True)
 
-@alexa.intent("YesIntent")
-def affirmative(request):
-    return confirm(request)
-
-@alexa.intent("AMAZON.YesIntent")
 def confirm(request):
     ''' This handler will confirm requests and execute them '''
     response = queryOnSessionKey(request)
@@ -121,6 +172,14 @@ def confirm(request):
         return alexa.respond(message="I was unable to complete creating the %s" % s_request['message'], end_session=True)
     return alexa.respond(message="I am creating the %s" % s_request['message'], end_session=True)
 
+@alexa.intent("YesIntent")
+def affirmative(request):
+    return confirm(request)
+
+@alexa.intent("AMAZON.YesIntent")
+def confirm_request(request):
+    return confirm(request)
+
 @alexa.intent("DeployBase")
 def deploy_base(request):
     return deploy(request,TEMPLATE_PATH_BASE,"Base Infrastructure")
@@ -137,14 +196,30 @@ def deploy_scores(request):
 def deploy_info(request):
     return deploy(request,TEMPLATE_PATH_INFO,"Info Page Container")
 
+@alexa.intent("CheckScores")
+def check_scores(request):
+    scores = topscores()
+    if not scores:
+        return alexa.respond(message="There are no current top scores.", end_session=True)
+
+    if len(scores) == 1:
+        return alexa.respond(message="The winner is %s with a score of %d where they %s." % (scores[0]['username'], scores[0]['score'], 'survived' if scores[0]['completed'] else 'died'), end_session=True)
+
+    names = 'and %s' % scores[0]['username']
+    for index, item in enumerate(scores):
+        if not index == 0:
+            names = '%s, ' % item['username'] + names
+    message = 'There are multiple winners with a score of %d where they %s. Their names are: %s' % (scores[0]['score'], 'survived' if scores[0]['completed'] else 'died', names)
+    return alexa.respond(message=message, end_session=True)
+
 @alexa.intent("AMAZON.NoIntent")
 def deny(request):
     return alexa.respond(message="Goodbye!", end_session=True)
 
 @alexa.intent("AMAZON.StopIntent")
 def stop(request):
-    return deny(request)
+    return alexa.respond(message="Goodbye!", end_session=True)
 
 @alexa.intent("AMAZON.CancelIntent")
 def cancel(request):
-    return deny(request)
+    return alexa.respond(message="Goodbye!", end_session=True)

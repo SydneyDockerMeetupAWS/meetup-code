@@ -1,5 +1,7 @@
 Parameters:
-    InRegionS3:
+    InRegion:
+        Type: String
+    ScoreTableName:
         Type: String
 
 Resources:
@@ -44,10 +46,11 @@ Resources:
             Environment:
                 Variables:
                     DYNAMO_TABLE: !Ref AlexaSkillTable
-                    TEMPLATE_PATH_BASE:   !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/02-deployinfra.yaml"
-                    TEMPLATE_PATH_PSCORE: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/03-addscores.yaml"
-                    TEMPLATE_PATH_SCORES: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/04-addboard.yaml"
-                    TEMPLATE_PATH_INFO:   !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegionS3}/05-addinfo.yaml"
+                    TEMPLATE_PATH_BASE:   !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegion}/02-deployinfra.yaml"
+                    TEMPLATE_PATH_PSCORE: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegion}/03-addscores.yaml"
+                    TEMPLATE_PATH_SCORES: !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegion}/04-addboard.yaml"
+                    TEMPLATE_PATH_INFO:   !Sub "https://s3-ap-southeast-2.amazonaws.com/${InRegion}/05-addinfo.yaml"
+                    SCORE_TABLE_NAME: !Ref ScoreTableName
 
 
     AlexaPermissions:
