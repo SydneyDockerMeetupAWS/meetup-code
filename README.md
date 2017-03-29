@@ -11,3 +11,11 @@ In this repo you will find:
 - Bootstrap Script
 - CloudFormation templates
 
+Please find the following references:
+
+- Docker and AWS: https://aws.amazon.com/docker/
+- AWS Batch: https://aws.amazon.com/batch/use-cases/
+- ECS First Run: https://aws.amazon.com/getting-started/tutorials/deploy-docker-containers/
+- Scaling ECS: https://www.youtube.com/watch?v=eun8CqGqdk8
+- AWS Sydney Summit: https://aws.amazon.com/summits/sydney/agenda/
+
